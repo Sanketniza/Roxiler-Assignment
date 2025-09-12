@@ -68,8 +68,44 @@ UserSchema.pre("save", async function (next) {
     next();
 });
 
+// Validate password before hashing
+UserSchema.pre('validate', function(next) {
+    if (this.isModified('password')) {
+        const password = this.password;
+
+        if (password.length < 8) {
+            this.invalidate('password', 'Password must be at least 8 characters');
+        } 
+        
+        else if (password.length > 16) {
+            this.invalidate('password', 'Password cannot exceed 16 characters');
+        } 
+        
+        else if (!/[A-Z]/.test(password)) {
+            this.invalidate('password', 'Password must contain at least one uppercase letter');
+        } 
+        
+        else if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            this.invalidate('password', 'Password must contain at least one special character');
+        }
+    }
+    
+    next();
+});
+
+// Hash password after validation but before saving
+UserSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) {
+        return next();
+    }
+  
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+});
+
 // Method to compare passwords
-UserSchema.methods.comparePassword = async function (candidatePassword) {
+UserSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 

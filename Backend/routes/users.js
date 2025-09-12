@@ -133,49 +133,49 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 // @desc    Delete user
 // @access  Private/Admin
 router.delete('/:id', protect, authorize('admin'), async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
+    try {
+        const user = await User.findById(req.params.id);
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+        if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+        }
+
+        // If user is a store owner, delete their store
+        if (user.role === 'store_owner') {
+        await Store.deleteMany({ owner: user._id });
+        }
+
+        // Delete user's ratings
+        await Rating.deleteMany({ user: user._id });
+
+        // Delete user
+        await user.remove();
+
+        res.json({ message: 'User removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
-
-    // If user is a store owner, delete their store
-    if (user.role === 'store_owner') {
-      await Store.deleteMany({ owner: user._id });
-    }
-
-    // Delete user's ratings
-    await Rating.deleteMany({ user: user._id });
-
-    // Delete user
-    await user.remove();
-
-    res.json({ message: 'User removed' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
 });
 
 // @route   GET /api/users/dashboard/stats
 // @desc    Get dashboard statistics
 // @access  Private/Admin
 router.get('/dashboard/stats', protect, authorize('admin'), async (req, res) => {
-  try {
-    const totalUsers = await User.countDocuments();
-    const totalStores = await Store.countDocuments();
-    const totalRatings = await Rating.countDocuments();
+    try {
+        const totalUsers = await User.countDocuments();
+        const totalStores = await Store.countDocuments();
+        const totalRatings = await Rating.countDocuments();
 
-    res.json({
-      totalUsers,
-      totalStores,
-      totalRatings
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
+        res.json({
+        totalUsers,
+        totalStores,
+        totalRatings
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
 });
 
 module.exports = router;

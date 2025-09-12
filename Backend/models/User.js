@@ -1,0 +1,76 @@
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const validator = require("validator");
+
+const UserSchema = new mongoose.Schema({
+
+    name: {
+        type: String,
+        required: [true, "Please provide a name"],
+        minlength: [20, "Name must be at least 20 characters"],
+        maxlength: [60, "Name cannot exceed 60 characters"],
+    },
+
+    email: {
+        type: String,
+        required: [true, "Please provide an email"],
+        unique: true,
+        validate: {
+            validator: validator.isEmail,
+            message: "Please provide a valid email",
+        },
+    },
+
+    password: {
+        type: String,
+        required: [true, "Please provide a password"],
+        minlength: [8, "Password must be at least 8 characters"],
+        maxlength: [16, "Password cannot exceed 16 characters"],
+
+        validate: {
+            validator: function (value) {
+                // Password must contain at least one uppercase letter and one special character
+                return /[A-Z]/.test(value) && /[!@#$%^&*(),.?":{}|<>]/.test(value);
+            },
+
+            message:
+                "Password must contain at least one uppercase letter and one special character",
+        },
+    },
+
+    address: {
+        type: String,
+        required: [true, "Please provide an address"],
+        maxlength: [400, "Address cannot exceed 400 characters"],
+    },
+
+    role: {
+        type: String,
+        enum: ["admin", "user", "store_owner"],
+        default: "user",
+    },
+
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+
+});
+
+// Hash password before saving
+UserSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Method to compare passwords
+UserSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model("User", UserSchema);

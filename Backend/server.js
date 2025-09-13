@@ -18,12 +18,19 @@ app.use(express.json());
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URL, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URL);
     console.log('MongoDB connected successfully');
   } catch (error) {
+    console.error('Failed to connect to MongoDB Atlas. Attempting to connect to local MongoDB...');
+    try {
+      // Try connecting to a local MongoDB instance if available
+      await mongoose.connect('mongodb://localhost:27017/store_rating_app');
+      console.log('Connected to local MongoDB successfully');
+      return;
+    } catch (localError) {
+      // If local connection also fails, log both errors
+      console.error('Local MongoDB connection error:', localError.message);
+    }
     console.error('MongoDB connection error:', error.message);
     process.exit(1);
   }
@@ -54,7 +61,10 @@ const seedAdminUser = async () => {
   }
 };
 
-connectDB().then(seedAdminUser);
+connectDB().then(seedAdminUser).catch(err => {
+  console.error('Error during startup:', err);
+  process.exit(1);
+});
 
 // Import routes
 const authRoutes = require('./routes/auth');

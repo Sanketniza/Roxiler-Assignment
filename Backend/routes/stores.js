@@ -3,7 +3,7 @@ const router = express.Router();
 const Store = require('../models/Store');
 const User = require('../models/User');
 const Rating = require('../models/Rating');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, validateObjectId } = require('../middleware/auth');
 
 // @route   GET /api/stores
 // @desc    Get all stores
@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
 // @access  Private/Admin
 router.post('/', protect, authorize('admin'), async (req, res) => {
   try {
-    const { name, email, address, ownerId } = req.body;
+    const { name, email, address, ownerId, ownerPassword } = req.body;
 
     // Check if store with this email already exists
     const storeExists = await Store.findOne({ email });
@@ -38,15 +38,21 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
       return res.status(400).json({ message: 'Store with this email already exists' });
     }
 
-    // Check if owner exists and is a store_owner
+    // Check if owner exists
     const owner = await User.findById(ownerId);
     if (!owner) {
       return res.status(404).json({ message: 'Owner not found' });
     }
 
-    // Update user role to store_owner if not already
+    // Update user role to store_owner if not already and set password
     if (owner.role !== 'store_owner') {
       owner.role = 'store_owner';
+      
+      // Only update password if provided
+      if (ownerPassword) {
+        owner.password = ownerPassword;
+      }
+      
       await owner.save();
     }
 
@@ -68,7 +74,7 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 // @route   GET /api/stores/:id
 // @desc    Get store by ID
 // @access  Public
-router.get('/:id', async (req, res) => {
+router.get('/:id', validateObjectId, async (req, res) => {
   try {
     const store = await Store.findById(req.params.id).populate('owner', 'name email');
 
@@ -86,7 +92,7 @@ router.get('/:id', async (req, res) => {
 // @route   PUT /api/stores/:id
 // @desc    Update store
 // @access  Private/Admin
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+router.put('/:id', protect, authorize('admin'), validateObjectId, async (req, res) => {
   try {
     const { name, email, address } = req.body;
 
@@ -113,7 +119,7 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 // @route   DELETE /api/stores/:id
 // @desc    Delete store
 // @access  Private/Admin
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('admin'), validateObjectId, async (req, res) => {
   try {
     const store = await Store.findById(req.params.id);
 
@@ -137,7 +143,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 // @route   GET /api/stores/owner/:userId
 // @desc    Get store by owner ID
 // @access  Private
-router.get('/owner/:userId', protect, async (req, res) => {
+router.get('/owner/:userId', protect, validateObjectId, async (req, res) => {
   try {
     // Check if user is the owner or an admin
     if (req.user._id.toString() !== req.params.userId && req.user.role !== 'admin') {
@@ -160,7 +166,7 @@ router.get('/owner/:userId', protect, async (req, res) => {
 // @route   GET /api/stores/:id/ratings
 // @desc    Get all ratings for a store
 // @access  Private/StoreOwner or Admin
-router.get('/:id/ratings', protect, async (req, res) => {
+router.get('/:id/ratings', protect, validateObjectId, async (req, res) => {
   try {
     const store = await Store.findById(req.params.id);
 

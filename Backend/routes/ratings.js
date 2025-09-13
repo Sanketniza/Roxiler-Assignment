@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Rating = require('../models/Rating');
 const Store = require('../models/Store');
-const { protect } = require('../middleware/auth');
+const { protect, validateObjectId } = require('../middleware/auth');
 
 // @route   POST /api/ratings
 // @desc    Create or update a rating
@@ -75,7 +75,7 @@ router.get('/user', protect, async (req, res) => {
 // @route   GET /api/ratings/store/:storeId
 // @desc    Get user's rating for a specific store
 // @access  Private
-router.get('/store/:storeId', protect, async (req, res) => {
+router.get('/store/:storeId', protect, validateObjectId, async (req, res) => {
   try {
     const rating = await Rating.findOne({
       user: req.user._id,
@@ -96,7 +96,7 @@ router.get('/store/:storeId', protect, async (req, res) => {
 // @route   PUT /api/ratings/:id
 // @desc    Update a rating
 // @access  Private
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', protect, validateObjectId, async (req, res) => {
   try {
     const { rating } = req.body;
 
@@ -134,7 +134,7 @@ router.put('/:id', protect, async (req, res) => {
 // @route   DELETE /api/ratings/:id
 // @desc    Delete a rating
 // @access  Private
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, validateObjectId, async (req, res) => {
   try {
     const rating = await Rating.findById(req.params.id);
 

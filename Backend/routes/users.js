@@ -3,7 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const Store = require('../models/Store');
 const Rating = require('../models/Rating');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, validateObjectId } = require('../middleware/auth');
 
 // @route   GET /api/users
 // @desc    Get all users
@@ -69,7 +69,7 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 // @route   GET /api/users/:id
 // @desc    Get user by ID
 // @access  Private/Admin
-router.get('/:id', protect, authorize('admin'), async (req, res) => {
+router.get('/:id', protect, authorize('admin'), validateObjectId, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
 
@@ -98,7 +98,7 @@ router.get('/:id', protect, authorize('admin'), async (req, res) => {
 // @route   PUT /api/users/:id
 // @desc    Update user
 // @access  Private/Admin
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+router.put('/:id', protect, authorize('admin'), validateObjectId, async (req, res) => {
   try {
     const { name, email, address, role } = req.body;
 
@@ -132,50 +132,50 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 // @route   DELETE /api/users/:id
 // @desc    Delete user
 // @access  Private/Admin
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
-    try {
-        const user = await User.findById(req.params.id);
+router.delete('/:id', protect, authorize('admin'), validateObjectId, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
 
-        if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-        }
-
-        // If user is a store owner, delete their store
-        if (user.role === 'store_owner') {
-        await Store.deleteMany({ owner: user._id });
-        }
-
-        // Delete user's ratings
-        await Rating.deleteMany({ user: user._id });
-
-        // Delete user
-        await user.remove();
-
-        res.json({ message: 'User removed' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    // If user is a store owner, delete their store
+    if (user.role === 'store_owner') {
+      await Store.deleteMany({ owner: user._id });
+    }
+
+    // Delete user's ratings
+    await Rating.deleteMany({ user: user._id });
+
+    // Delete user
+    await User.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'User removed' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
 });
 
 // @route   GET /api/users/dashboard/stats
 // @desc    Get dashboard statistics
 // @access  Private/Admin
 router.get('/dashboard/stats', protect, authorize('admin'), async (req, res) => {
-    try {
-        const totalUsers = await User.countDocuments();
-        const totalStores = await Store.countDocuments();
-        const totalRatings = await Rating.countDocuments();
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalStores = await Store.countDocuments();
+    const totalRatings = await Rating.countDocuments();
 
-        res.json({
-        totalUsers,
-        totalStores,
-        totalRatings
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
-    }
+    res.json({
+      totalUsers,
+      totalStores,
+      totalRatings
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
 });
 
 module.exports = router;

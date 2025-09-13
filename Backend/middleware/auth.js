@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // Middleware to protect routes
 const protect = async (req, res, next) => {
@@ -41,4 +42,35 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+// Middleware to validate MongoDB ObjectId
+const validateObjectId = (req, res, next) => {
+  // Get all potential ID parameters
+  const idParams = ['id', 'userId', 'storeId', 'ownerId'].filter(param => req.params[param]);
+  
+  // If no ID parameters found, continue
+  if (idParams.length === 0) {
+    return next();
+  }
+  
+  // Check each ID parameter
+  for (const paramName of idParams) {
+    const paramValue = req.params[paramName];
+    
+    // Skip validation for special routes like 'new', 'dashboard', etc.
+    if (paramValue === 'new' || paramValue === 'dashboard' || paramValue === 'stats') {
+      continue;
+    }
+    
+    // Check if the ID is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(paramValue)) {
+      return res.status(400).json({ 
+        message: 'Invalid ID format', 
+        details: `'${paramValue}' is not a valid MongoDB ObjectId`
+      });
+    }
+  }
+  
+  next();
+};
+
+module.exports = { protect, authorize, validateObjectId };

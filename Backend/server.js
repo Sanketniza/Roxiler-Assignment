@@ -6,31 +6,51 @@ const User = require('./models/User');
 const bcrypt = require('bcryptjs');
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: __dirname + '/.env' });
 
 // Initialize Express app
 const app = express();  
+// Catch-all OPTIONS handler for CORS
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(204).end();
+});
 
 // Middleware
-app.use(cors());
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://ornate-palmier-e90159.netlify.app',
+    'http://localhost:5173',
+    'http://localhost:5000'
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+  next();
+});
+app.use(express.json());
 app.use(express.json());
 
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URL);
+    await mongoose.connect(process.env.MONGODB_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
     console.log('MongoDB connected successfully');
   } catch (error) {
-    console.error('Failed to connect to MongoDB Atlas. Attempting to connect to local MongoDB...');
-    try {
-      // Try connecting to a local MongoDB instance if available
-      await mongoose.connect('mongodb://localhost:27017/store_rating_app');
-      console.log('Connected to local MongoDB successfully');
-      return;
-    } catch (localError) {
-      // If local connection also fails, log both errors
-      console.error('Local MongoDB connection error:', localError.message);
-    }
     console.error('MongoDB connection error:', error.message);
     process.exit(1);
   }
@@ -40,15 +60,19 @@ const connectDB = async () => {
 const seedAdminUser = async () => {
   const adminEmail = 'sanket123@gmail.com';
   const adminPassword = 'Sanket123.';
-  const adminName = 'System Administrator';
+  const adminName = 'System Administrator Admin'; // 26 characters, meets minlength
   const adminAddress = 'Admin Address';
   try {
     const existingAdmin = await User.findOne({ email: adminEmail });
     if (!existingAdmin) {
+      // Hash password before saving
+      const bcrypt = require('bcryptjs');
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(adminPassword, salt);
       await User.create({
         name: adminName,
         email: adminEmail,
-        password: adminPassword,
+        password: hashedPassword,
         address: adminAddress,
         role: 'admin'
       });
@@ -61,10 +85,7 @@ const seedAdminUser = async () => {
   }
 };
 
-connectDB().then(seedAdminUser).catch(err => {
-  console.error('Error during startup:', err);
-  process.exit(1);
-});
+connectDB().then(seedAdminUser);
 
 // Import routes
 const authRoutes = require('./routes/auth');

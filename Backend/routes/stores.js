@@ -28,20 +28,31 @@ router.get('/', async (req, res) => {
 // @route   POST /api/stores
 // @desc    Create a new store
 // @access  Private/Admin
-router.post('/', protect, authorize('admin'), async (req, res) => {
+router.post('/', protect, authorize('admin', 'store_owner'), async (req, res) => {
   try {
     const { name, email, address, ownerId, ownerPassword } = req.body;
+    const loggedInUser = req.user;
+
+    let owner;
+
+    if (loggedInUser.role === 'admin') {
+      // If admin is creating the store, ownerId must be provided
+      if (!ownerId) {
+        return res.status(400).json({ message: 'Owner ID is required for admin to create a store' });
+      }
+      owner = await User.findById(ownerId);
+      if (!owner) {
+        return res.status(404).json({ message: 'Owner not found' });
+      }
+    } else if (loggedInUser.role === 'store_owner') {
+      // If store_owner is creating the store, they are the owner
+      owner = loggedInUser;
+    }
 
     // Check if store with this email already exists
     const storeExists = await Store.findOne({ email });
     if (storeExists) {
       return res.status(400).json({ message: 'Store with this email already exists' });
-    }
-
-    // Check if owner exists
-    const owner = await User.findById(ownerId);
-    if (!owner) {
-      return res.status(404).json({ message: 'Owner not found' });
     }
 
     // Update user role to store_owner if not already and set password
@@ -61,7 +72,7 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
       name,
       email,
       address,
-      owner: ownerId
+      owner: owner._id
     });
 
     res.status(201).json(store);
@@ -76,7 +87,15 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 // @access  Public
 router.get('/:id', validateObjectId, async (req, res) => {
   try {
-    const store = await Store.findById(req.params.id).populate('owner', 'name email');
+    const store = await Store.findById(req.params.id)
+      .populate('owner', 'name email')
+      .populate({
+        path: 'ratings',
+        populate: {
+          path: 'user',
+          select: 'name'
+        }
+      });
 
     if (!store) {
       return res.status(404).json({ message: 'Store not found' });

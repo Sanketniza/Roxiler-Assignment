@@ -11,8 +11,10 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import StoreList from './pages/StoreList';
 import StoreDetails from './pages/StoreDetails';
+import StoreForm from './pages/StoreForm';
 import UserList from './pages/UserList';
 import UserDetails from './pages/UserDetails';
+import UserForm from './pages/UserForm';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
@@ -73,6 +75,12 @@ function App() {
                 <StoreList />
               </ProtectedRoute>
             } />
+
+            <Route path="/stores/new" element={
+              <ProtectedRoute allowedRoles={['admin', 'store_owner']}>
+                <StoreForm />
+              </ProtectedRoute>
+            } />
             
             <Route path="/stores/:id" element={
               <ProtectedRoute>
@@ -90,6 +98,12 @@ function App() {
             <Route path="/users" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <UserList />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/users/new" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <UserForm />
               </ProtectedRoute>
             } />
             

@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   
   // Set up axios defaults
   // Use environment variable or default to localhost for development
-  axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   
   // Add token to requests if available
   useEffect(() => {
@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
         
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        const res = await axios.get('/auth/me');
+        const res = await axios.get('/api/auth/me');
         
         setUser(res.data);
         setLoading(false);
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post('/auth/register', userData);
+      const res = await axios.post('/api/auth/register', userData);
       
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('userRole', res.data.role);
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const res = await axios.post('/auth/login', { email, password });
+      const res = await axios.post('/api/auth/login', { email, password });
       
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('userRole', res.data.role);
@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      await axios.put('/auth/password', { currentPassword, newPassword });
+      await axios.put('/api/auth/password', { currentPassword, newPassword });
       
       setLoading(false);
       toast.success('Password updated successfully');
@@ -150,6 +150,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         updatePassword,
         isAuthenticated: !!user,
+        setUser,
       }}
     >
       {children}

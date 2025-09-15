@@ -4,6 +4,9 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 Currently, two official plugins are available:
 
+## If you still see CORS Error:-
+If you still see CORS, test in a fresh Incognito window with all extensions disabled. Your logs reference “spoofer.js” and chrome-extension://—privacy/CORS/script-injection extensions can break preflights.
+
 
 ## Expanding the ESLint configuration
 
